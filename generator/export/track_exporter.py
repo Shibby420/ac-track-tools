@@ -73,12 +73,19 @@ def build_track(
 
         # ── 2. Fetch OSM data ────────────────────────────────────────────
         _progress("[2/7] Fetching OpenStreetMap data...")
-        from core.osm_fetcher import fetch_osm_data
-        osm = fetch_osm_data(area, progress_cb=_progress)
-        _progress(f"  Found: {len(osm.roads)} roads, {len(osm.forests)} forests, {len(osm.trees)} trees, {len(osm.traffic_signs)} signs")
+        try:
+            from core.osm_fetcher import fetch_osm_data
+            osm = fetch_osm_data(area, progress_cb=_progress)
+            _progress(f"  Found: {len(osm.roads)} roads, {len(osm.forests)} forests, {len(osm.trees)} trees, {len(osm.traffic_signs)} signs")
+        except Exception as e:
+            result.warnings.append(f"OSM API unavailable ({e}), using offline route data")
+            _progress(f"  OSM API blocked — using offline/synthetic road data")
+            from core.offline_data import make_synthetic_osm
+            osm = make_synthetic_osm(area, route_key=location)
+            _progress(f"  Synthetic data: {len(osm.roads)} road(s), {len(osm.trees)} trees")
 
         if not osm.roads:
-            result.errors.append("No roads found in the specified area. Try a larger radius or different location.")
+            result.errors.append("No roads found. Try a different location or larger radius.")
             return result
 
         # ── 3. Fetch elevation ───────────────────────────────────────────

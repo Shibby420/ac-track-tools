@@ -1,0 +1,19 @@
+{
+  "name": "Palisades Interstate Parkway, New Jersey",
+  "description": "Auto-generated from OpenStreetMap data for Palisades Interstate Parkway, New Jersey",
+  "tags": [
+    "generated",
+    "openstreetmap",
+    "ac-track-generator"
+  ],
+  "geotags": [
+    "40.958700,-73.989000"
+  ],
+  "country": "New Jersey",
+  "city": "Palisades Interstate Parkway",
+  "length": "25.01 km",
+  "width": "14",
+  "pitboxes": 20,
+  "run": "0",
+  "author": "AC Track Generator"
+}
