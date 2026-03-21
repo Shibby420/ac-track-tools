@@ -20,6 +20,7 @@ class ACTrackGeneratorApp(tk.Tk):
         self.configure(bg="#2b2b2b")
 
         self._build_thread: threading.Thread | None = None
+        self._last_built_path: str | None = None
         self._setup_ui()
 
     # ─────────────────────────────────────────────────────────────────────
@@ -195,6 +196,14 @@ class ACTrackGeneratorApp(tk.Tk):
             state=tk.DISABLED,
         )
         self.cancel_btn.pack(side=tk.LEFT, padx=(8, 0))
+
+        self.install_btn = ttk.Button(
+            frame,
+            text="Install to AC",
+            command=self._install_to_ac,
+            state=tk.DISABLED,
+        )
+        self.install_btn.pack(side=tk.LEFT, padx=(8, 0))
 
         ttk.Button(
             frame,
@@ -376,6 +385,8 @@ class ACTrackGeneratorApp(tk.Tk):
         self.progress_var.set(0)
 
         if result.success:
+            self._last_built_path = result.output_path
+            self.install_btn.config(state=tk.NORMAL)
             self.status_label.config(text="Done!", foreground="#44cc44")
             self._log(f"\n✓ Build complete!\n")
             self._log(f"Output: {result.output_path}\n")
@@ -387,7 +398,7 @@ class ACTrackGeneratorApp(tk.Tk):
             messagebox.showinfo(
                 "Build Complete",
                 f"Track built successfully!\n\nOutput: {result.output_path}\n\n"
-                f"Copy to:\n[AC install]/content/tracks/"
+                f"Click 'Install to AC' to add it to your game."
             )
         else:
             self.status_label.config(text="Failed", foreground="#cc4444")
@@ -404,6 +415,39 @@ class ACTrackGeneratorApp(tk.Tk):
         self.status_label.config(text="Error", foreground="#cc4444")
         self._log(f"\n✗ Error: {msg}\n{trace}\n")
         messagebox.showerror("Error", f"Build error:\n{msg}")
+
+    def _install_to_ac(self) -> None:
+        """Install the last built track into the AC installation."""
+        gen_root = str(Path(__file__).parent.parent)
+        if gen_root not in sys.path:
+            sys.path.insert(0, gen_root)
+        from core.installer import find_ac_install, install_track  # type: ignore
+
+        track_folder = self._last_built_path
+        if not track_folder or not os.path.exists(track_folder):
+            messagebox.showerror("Error", "No built track found. Build a track first.")
+            return
+
+        self._log("\nSearching for Assetto Corsa installation...\n")
+        ac_dir = find_ac_install()
+        if ac_dir:
+            self._log(f"  Found AC at: {ac_dir}\n")
+        else:
+            ac_dir = filedialog.askdirectory(
+                title="Select Assetto Corsa Install Directory",
+                mustexist=True,
+            )
+            if not ac_dir:
+                return
+
+        self._log(f"Installing track to AC...\n")
+        result = install_track(track_folder, ac_dir)
+        if result["success"]:
+            self._log(f"✓ {result['message']}\n")
+            messagebox.showinfo("Installed!", result["message"])
+        else:
+            self._log(f"✗ {result['message']}\n")
+            messagebox.showerror("Install Failed", result["message"])
 
     # ─────────────────────────────────────────────────────────────────────
     # Log helpers

@@ -94,6 +94,16 @@ def main() -> int:
         action="store_true",
         help="List all generated files on success",
     )
+    parser.add_argument(
+        "--auto-install",
+        action="store_true",
+        help="Automatically install track into AC after a successful build",
+    )
+    parser.add_argument(
+        "--install-dir",
+        metavar="DIR",
+        help="AC install directory (auto-detected if not specified)",
+    )
 
     args = parser.parse_args()
 
@@ -152,15 +162,42 @@ def _handle_build(location: str, args) -> int:
                 size = os.path.getsize(f) if os.path.exists(f) else 0
                 print(f"  {f}  ({_format_size(size)})")
         print()
-        print("To use in Assetto Corsa Content Manager:")
-        print(f"  Copy '{result.output_path}' to your AC tracks folder:")
-        print(f"  [AC install]/content/tracks/")
+
+        # Auto-install if requested
+        if getattr(args, "auto_install", False) or getattr(args, "install_dir", None):
+            _handle_install(result.output_path, getattr(args, "install_dir", None))
+        else:
+            print("To use in Assetto Corsa Content Manager:")
+            print(f"  Copy '{result.output_path}' to your AC tracks folder:")
+            print(f"  [AC install]/content/tracks/")
+            print(f"  Or re-run with --auto-install to do it automatically.")
         return 0
     else:
         print("✗ Build failed!")
         for err in result.errors:
             print(f"  ERROR: {err}", file=sys.stderr)
         return 1
+
+
+def _handle_install(track_folder: str, install_dir: str | None) -> None:
+    """Install the built track into the AC tracks directory."""
+    from core.installer import find_ac_install, install_track  # type: ignore
+
+    if install_dir is None:
+        print("Searching for Assetto Corsa installation...")
+        install_dir = find_ac_install()
+        if install_dir:
+            print(f"  Found AC at: {install_dir}")
+        else:
+            print("  AC installation not found automatically.")
+            print("  Use --install-dir to specify your AC path.")
+            return
+
+    result = install_track(track_folder, install_dir)
+    if result["success"]:
+        print(f"\n✓ {result['message']}")
+    else:
+        print(f"\n⚠ Install failed: {result['message']}", file=sys.stderr)
 
 
 def _handle_import(args) -> int:

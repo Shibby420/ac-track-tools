@@ -56,9 +56,10 @@ def geocode(location_name: str) -> tuple[float, float] | None:
 
 # Fallback coordinates for known locations when geocoding API is unavailable
 _KNOWN_COORDS: dict[str, tuple[float, float]] = {
-    "palisades": (40.9587, -73.9890),
-    "palisades interstate": (40.9587, -73.9890),
-    "palisades parkway": (40.9587, -73.9890),
+    "palisades": (41.0811, -73.9733),       # Center of full route (Fort Lee → Bear Mt)
+    "palisades interstate": (41.0811, -73.9733),
+    "palisades parkway": (41.0811, -73.9733),
+    "bear mountain": (41.3148, -73.9528),
     "nurburgring": (50.3356, 6.9475),
     "monaco": (43.7384, 7.4246),
     "silverstone": (52.0786, -1.0169),
