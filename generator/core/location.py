@@ -1,0 +1,99 @@
+"""Location resolution: geocode place names to coordinates and compute bounding boxes."""
+from __future__ import annotations
+
+import math
+from dataclasses import dataclass, field
+
+import requests
+
+
+@dataclass
+class TrackArea:
+    name: str
+    center_lat: float
+    center_lon: float
+    radius_km: float
+    min_lat: float
+    min_lon: float
+    max_lat: float
+    max_lon: float
+
+    @property
+    def width_m(self) -> float:
+        return (self.max_lon - self.min_lon) * 111320 * math.cos(math.radians(self.center_lat))
+
+    @property
+    def height_m(self) -> float:
+        return (self.max_lat - self.min_lat) * 111320
+
+    def to_local(self, lat: float, lon: float) -> tuple[float, float]:
+        """Convert lat/lon to local XZ coordinates in meters (Y=0 flat)."""
+        x = (lon - self.center_lon) * 111320 * math.cos(math.radians(self.center_lat))
+        z = (lat - self.center_lat) * 111320
+        return (x, z)
+
+
+def geocode(location_name: str) -> tuple[float, float] | None:
+    """Resolve a place name to (lat, lon) using Nominatim."""
+    url = "https://nominatim.openstreetmap.org/search"
+    params = {
+        "q": location_name,
+        "format": "json",
+        "limit": 1,
+    }
+    headers = {"User-Agent": "AC-Track-Generator/1.0"}
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        response.raise_for_status()
+        results = response.json()
+        if results:
+            return (float(results[0]["lat"]), float(results[0]["lon"]))
+    except Exception as e:
+        raise RuntimeError(f"Geocoding failed for '{location_name}': {e}") from e
+    return None
+
+
+def get_track_area(location: str, radius_km: float = 3.0) -> TrackArea:
+    """
+    Resolve a location name or 'lat,lon' string to a TrackArea.
+
+    Args:
+        location: Place name like 'Nurburgring' or coordinates '50.335,6.947'
+        radius_km: Radius of the area to capture
+
+    Returns:
+        TrackArea with bounding box
+    """
+    # Try parsing as coordinates first
+    if "," in location:
+        parts = location.split(",")
+        if len(parts) == 2:
+            try:
+                lat, lon = float(parts[0].strip()), float(parts[1].strip())
+                return _make_area("Custom", lat, lon, radius_km)
+            except ValueError:
+                pass
+
+    # Geocode by name
+    result = geocode(location)
+    if not result:
+        raise RuntimeError(f"Could not find location: '{location}'")
+    lat, lon = result
+    return _make_area(location, lat, lon, radius_km)
+
+
+def _make_area(name: str, lat: float, lon: float, radius_km: float) -> TrackArea:
+    """Build TrackArea from center coordinates and radius."""
+    # 1 degree lat ≈ 111,320m; 1 degree lon ≈ 111,320m * cos(lat)
+    delta_lat = radius_km / 111.32
+    delta_lon = radius_km / (111.32 * math.cos(math.radians(lat)))
+    return TrackArea(
+        name=name,
+        center_lat=lat,
+        center_lon=lon,
+        radius_km=radius_km,
+        min_lat=lat - delta_lat,
+        min_lon=lon - delta_lon,
+        max_lat=lat + delta_lat,
+        max_lon=lon + delta_lon,
+    )
