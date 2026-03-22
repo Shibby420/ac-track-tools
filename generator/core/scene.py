@@ -56,6 +56,9 @@ def assemble_scene(
     terrain_mesh: Mesh,
     foliage_meshes: list[Mesh],
     sign_meshes: list[Mesh],
+    building_meshes: list[Mesh] | None = None,
+    guardrail_meshes: list[Mesh] | None = None,
+    marking_meshes: list[Mesh] | None = None,
     progress_cb=None,
 ) -> ACScene:
     """
@@ -72,11 +75,17 @@ def assemble_scene(
         osm=osm,
     )
 
-    # Add all geometry
-    scene.add_meshes(road_meshes)
+    # Add all geometry (terrain first, then roads, then detail)
     scene.add_mesh(terrain_mesh)
+    scene.add_meshes(road_meshes)
+    if marking_meshes:
+        scene.add_meshes(marking_meshes)
     scene.add_meshes(foliage_meshes)
     scene.add_meshes(sign_meshes)
+    if guardrail_meshes:
+        scene.add_meshes(guardrail_meshes)
+    if building_meshes:
+        scene.add_meshes(building_meshes)
 
     # Calculate track length from longest road
     main_road = _find_main_road(osm, area)

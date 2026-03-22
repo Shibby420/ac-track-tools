@@ -13,6 +13,7 @@ def build_terrain_mesh(
     elevation: ElevationMap,
     grid_resolution: int = 64,
     progress_cb=None,
+    satellite_bounds: tuple[float, float, float, float] | None = None,
 ) -> Mesh:
     """
     Generate a terrain grid mesh for the entire area.
@@ -25,6 +26,8 @@ def build_terrain_mesh(
         elevation: Elevation data with interpolation
         grid_resolution: Number of grid cells per axis (64x64 = 4096 quads)
         progress_cb: Optional progress callback
+        satellite_bounds: If provided, (min_lat, min_lon, max_lat, max_lon) of the
+            satellite texture so UV coords map the image precisely onto the mesh.
 
     Returns:
         A single Mesh representing the terrain
@@ -53,7 +56,14 @@ def build_terrain_mesh(
             y = elevation.get_elevation(lat, lon)
 
             vertices.append([x, y, z])
-            uvs.append([x * uv_scale, z * uv_scale])
+
+            if satellite_bounds is not None:
+                sat_min_lat, sat_min_lon, sat_max_lat, sat_max_lon = satellite_bounds
+                u = (lon - sat_min_lon) / (sat_max_lon - sat_min_lon) if sat_max_lon != sat_min_lon else 0.5
+                v_coord = (sat_max_lat - lat) / (sat_max_lat - sat_min_lat) if sat_max_lat != sat_min_lat else 0.5
+                uvs.append([u, v_coord])
+            else:
+                uvs.append([x * uv_scale, z * uv_scale])
 
     # Build quad indices
     for row in range(grid_resolution):

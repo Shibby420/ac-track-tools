@@ -1,0 +1,19 @@
+{
+  "name": "palisades parkway",
+  "description": "Auto-generated from OpenStreetMap data for palisades parkway",
+  "tags": [
+    "generated",
+    "openstreetmap",
+    "ac-track-generator"
+  ],
+  "geotags": [
+    "41.081100,-73.973300"
+  ],
+  "country": "",
+  "city": "palisades parkway",
+  "length": "52.56 km",
+  "width": "14",
+  "pitboxes": 8,
+  "run": "0",
+  "author": "AC Track Generator"
+}
